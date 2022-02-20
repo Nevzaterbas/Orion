@@ -27,7 +27,7 @@ class VideoThread(QThread):
             ret, bbox = tracker.update(cv_img)
             if ret:
                 (x,y,w,h) = [int(v) for v in bbox]
-                cv2.rectangle(cv_img, (x,y), (x+w, y+h), (0, 255, 0), 2, 1)
+                cv2.rectangle(cv_img, (x, y), (x+w, y+h), (0, 255, 0), 2, 1)
             self.change_pixmap_signal.emit(cv_img)
         cap.release()
 
