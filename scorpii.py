@@ -9,7 +9,8 @@ import numpy as np
 tracker = cv2.TrackerKCF_create()
 cap = cv2.VideoCapture(0)
 ret, cv_img = cap.read()
-bbox = cv2.selectROI(cv_img)
+bbox = cv2.selectROI('ROI', cv_img)
+cv2.destroyWindow('ROI')
 ret = tracker.init(cv_img,bbox)
 
 
@@ -27,7 +28,7 @@ class VideoThread(QThread):
             ret, bbox = tracker.update(cv_img)
             if ret:
                 (x,y,w,h) = [int(v) for v in bbox]
-                cv2.rectangle(cv_img, (x, y), (x+w, y+h), (0, 255, 0), 2, 1)
+                cv2.rectangle(cv_img, (x,y), (x+w, y+h), (0, 255, 0), 2, 1)
             self.change_pixmap_signal.emit(cv_img)
         cap.release()
 
@@ -69,8 +70,7 @@ class App(QWidget):
     def convert_cv_qt(self, cv_img):
         rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, ch * w, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
