@@ -1,10 +1,16 @@
-from PyQt5 import QtGui
+# TODO: requirements.txt
+from PyQt5 import QtGui # pip install PyQt5
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import sys
+import sys, os
 import cv2
-import numpy as np
+import numpy as np # pip install numpy
+import io
+import folium # pip install folium
+from PyQt5.QtWidgets import QApplication, QWidget, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWebEngineWidgets import QWebEngineView  # pip install PyQtWebEngine
+from PyQt5 import  QtGui, QtWidgets
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -25,13 +31,28 @@ class VideoThread(QThread):
         self.wait()
 
 
-class App(QWidget):
+class App(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
+        self.view = QWebEngineView()
+        self.view.setContentsMargins(50, 50, 50, 50)
+
+        central_widget = QtWidgets.QWidget()
+        self.setCentralWidget(central_widget)
+        lay = QtWidgets.QHBoxLayout(central_widget)
+
+        lay.addWidget(self.view, stretch=1)
+
+        m = folium.Map(location=[45.5236, -122.6750], tiles="Stamen Terrain", zoom_start=13)
+
+        data = io.BytesIO()
+        m.save(data, close_file=False)
+        self.view.setHtml(data.getvalue().decode())
+
         self.setWindowTitle("Deneb")
-        self.resize(640, 600)
-        self.disply_width = 640
-        self.display_height = 480
+        self.resize(1200, 500)
+        self.disply_width = 500
+        self.display_height = 500
         self.image_label = QLabel(self)
         self.image_label.resize(self.disply_width, self.display_height)
         self.textLabel = QLabel('RTSP stream')
@@ -79,8 +100,10 @@ class App(QWidget):
         p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     app = QApplication(sys.argv)
+
     a = App()
     a.show()
     sys.exit(app.exec_())
