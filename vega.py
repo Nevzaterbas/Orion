@@ -5,9 +5,13 @@ from PyQt5.QtWidgets import *
 import sys
 import cv2
 import numpy as np
-
 net = cv2.dnn.readNet("yolo/yolov4-tiny.weights","yolo/yolov4-tiny.cfg")
-net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV); net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL) # intel
+if(len(cv2.dnn.getAvailableTargets(cv2.dnn.DNN_BACKEND_CUDA)) == 0):
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
+    print("No CUDA device found. Falling back to OpenCL acceleration.")
+else: print("Found a CUDA device. Using CUDA acceleration.")
+
 classes = []
 
 with open("yolo/coco.names","r") as f:
@@ -35,7 +39,7 @@ class VideoThread(QThread):
 class App(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Deneb")
+        self.setWindowTitle("Vega")
         self.resize(960, 540)
         self.disply_width = 640
         self.display_height = 480
