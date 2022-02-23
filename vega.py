@@ -7,10 +7,13 @@ import cv2
 import numpy as np
 net = cv2.dnn.readNet("yolo/yolov4-tiny.weights","yolo/yolov4-tiny.cfg")
 if(len(cv2.dnn.getAvailableTargets(cv2.dnn.DNN_BACKEND_CUDA)) == 0):
-    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV);
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
     net.setPreferableTarget(cv2.dnn.DNN_TARGET_OPENCL)
     print("No CUDA device found. Falling back to OpenCL acceleration.")
-else: print("Found a CUDA device. Using CUDA acceleration.")
+else: 
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+    print("Found a CUDA device. Using CUDA acceleration.")
 
 classes = []
 
