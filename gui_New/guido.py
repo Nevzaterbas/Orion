@@ -34,25 +34,23 @@ coordinate_x = 41.005858 #enlem
 coordinate_y = 29.009490 #boylam
 
 #window
-window_width = 1120
+window_width = 945
 window_height = 630
 
 #map
-map_width = 375
-map_height = 375
+map_width = 355
+map_height = 355
 map_location_x = int(window_width-map_width)
-map_location_y = int(10)
+map_location_y = int(40)
 
 #camera
-camera_widht = 375
-camera_height = 375
-camera_location_x = int(map_location_x-camera_widht-int(camera_widht/20))
-camera_location_y = int(10)
-camera_widht_resolution = int(camera_widht+50)
+camera_widht = 550
+camera_height = int((camera_widht/4)*3)
+camera_location_x = int((map_location_x-camera_widht))
+camera_location_y = int(50)
+camera_widht_resolution = int(camera_widht+55)
 camera_height_resolution = int(camera_height)
 
-#buttons size
-#webView.setContentsMargins(2,2,2,2)#default button margin
 
 
 
@@ -63,12 +61,80 @@ class Window(QWidget):
         # setting title
         self.setWindowTitle("Python ")
         # setting geometry
-        self.setGeometry(100, 100, window_width, window_height)
+        self.setGeometry(50, 50, window_width, window_height)
         # calling methods
         self.UiComponents()
+        self.UiControlPannel()
+        self.UiInformationPannel()
 
     # method for widgets
+    def UiInformationPannel(self):
+        #UÇUŞ MODU GÖSTERGESİ
+        textlabel = QLabel(self)
+        textlabel.setText("Aracın Uçuş Modu:OTONOM")
+        myFont = QtGui.QFont('Arial', 22)
+        myFont.setBold(True)
+        textlabel.setFont(myFont)
+        textlabel.setGeometry(14,10,int(window_width/2),35)
+        #information pannel(bilgi paneli)
+        textlabel = QLabel(self)
+        textlabel.setText("Aracın Uçuş Modu:OTONOM")
+        textlabel.setFont(myFont)
+        textlabel.setGeometry(14, 10, int(window_width / 2), 35)
+    def UiControlPannel(self):
 
+        control_pannel_button_x = int(window_width - 75)
+        control_pannel_textbox_x = int(window_width - 187)
+        control_pannel_text_x = int(window_width - 295)
+        # -------Control Panel Elements--------#
+        # koordinat gönder
+        label1 = QLabel(self)
+        label1.setText("Koordinat gönder")
+        label1.setGeometry(control_pannel_text_x, map_height + 10+ map_location_y, 100, 20)
+        textbox1 = QLineEdit(self)
+        textbox1.setGeometry(control_pannel_textbox_x, map_height + 10+ map_location_y, 100, 20)
+        button1 = QPushButton("Gönder", self)
+        button1.setGeometry(control_pannel_button_x, map_height + 10+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+        # araç hızını değiştir
+        label2 = QLabel(self)
+        label2.setText("Hızı değiştir")
+        label2.setGeometry(control_pannel_text_x, map_height + 35+ map_location_y, 100, 20)
+        textbox2 = QLineEdit(self)
+        textbox2.setGeometry(control_pannel_textbox_x, map_height + 35+ map_location_y, 100, 20)
+        button2 = QPushButton("Gönder", self)
+        button2.setGeometry(control_pannel_button_x, map_height + 35+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+        # araç irtifasını değiştir
+        label3 = QLabel(self)
+        label3.setText("İrtifa değiştir")
+        label3.setGeometry(control_pannel_text_x, map_height + 60+ map_location_y, 100, 20)
+        textbox3 = QLineEdit(self)
+        textbox3.setGeometry(control_pannel_textbox_x, map_height + 60+ map_location_y, 100, 20)
+        button3 = QPushButton("Gönder", self)
+        button3.setGeometry(control_pannel_button_x, map_height + 60+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+        # uçuş modu seçimi
+        label3 = QLabel(self)
+        label3.setText("Uçuş modunu değiştir")
+        label3.setGeometry(control_pannel_text_x, map_height + 85+ map_location_y, 200, 20)
+        button3 = QPushButton("Onayla", self)
+        button3.setGeometry(control_pannel_button_x, map_height + 85+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+        # uçuş modları
+        radio1 = QRadioButton("Otonom Kalkis", self)
+        radio1.setGeometry(window_width - 245, map_height + 110+ map_location_y, 150, 20)
+
+        radio2 = QRadioButton("Otonom İniş", self)
+        radio2.setGeometry(control_pannel_text_x+50, map_height + 135+ map_location_y, 150, 20)
+
+        radio4 = QRadioButton("Bul ve Takip Et", self)
+        radio4.setGeometry(control_pannel_text_x+50, map_height + 160+ map_location_y, 150, 20)
+
+        radio5 = QRadioButton("Kamikaze", self)
+        radio5.setGeometry(control_pannel_text_x+50, map_height + 185+ map_location_y, 150, 20)
+
+        textbox4 = QLineEdit(self)
+        textbox4.setGeometry(control_pannel_text_x+50, map_height + 210+ map_location_y, 100, 20)
+        textbox4 = QLineEdit(self)
+        textbox4.setGeometry(control_pannel_text_x+155, map_height + 210+ map_location_y, 100, 20)
+        # -------Control Panel Elements--------#
     def UiComponents(self):
         # -------Map Elements--------#
         webView = QWebEngineView(self)
@@ -77,7 +143,7 @@ class Window(QWidget):
         # coordinate = (37.8199286, -122.4782551) # usa da bir yer
         coordinate = (coordinate_x, coordinate_y)
         m = folium.Map(
-            tiles='Stamen Terrain', zoom_start=13, location=coordinate
+            tiles='Stamen Terrain', zoom_start=10, location=coordinate
         )
         # save map
         data = io.BytesIO()
@@ -88,7 +154,6 @@ class Window(QWidget):
         #-------Video Elements--------#
         self.image_label = QLabel(self)
         self.image_label.setGeometry(camera_location_x,camera_location_y,camera_widht, camera_height)
-        self.image_label.setContentsMargins(10, 10, 10, 10)
         #gui üzerindeki boyut ve konum belirler
         vbox = QVBoxLayout()
         self.setLayout(vbox)
@@ -96,60 +161,6 @@ class Window(QWidget):
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
         # -------Video Elements--------#
-
-        # -------Control Panel Elements--------#
-        #koordinat gönder
-        label1 = QLabel(self)
-        label1.setText("Koordinat gönder")
-        label1.setGeometry(window_width-295, map_height+20, 100, 20)
-        textbox1 = QLineEdit(self)
-        textbox1.setGeometry(window_width-187,map_height+20,100,20)
-        button1 = QPushButton("Gönder", self)
-        button1.setGeometry(window_width-75, map_height+20, 65, 20)#butonlar arası 5px boşluk
-        #araç hızını değiştir
-        label2 = QLabel(self)
-        label2.setText("Hızı değiştir")
-        label2.setGeometry(window_width - 295, map_height + 45, 100, 20)
-        textbox2 = QLineEdit(self)
-        textbox2.setGeometry(window_width - 187, map_height + 45, 100, 20)
-        button2 = QPushButton("Gönder", self)
-        button2.setGeometry(window_width - 75, map_height + 45, 65, 20)  # butonlar arası 5px boşluk
-        #araç irtifasını değiştir
-        label3 = QLabel(self)
-        label3.setText("İrtifa değiştir")
-        label3.setGeometry(window_width - 295, map_height + 70, 100, 20)
-        textbox3 = QLineEdit(self)
-        textbox3.setGeometry(window_width - 187, map_height + 70, 100, 20)
-        button3 = QPushButton("Gönder", self)
-        button3.setGeometry(window_width - 75, map_height + 70, 65, 20)  # butonlar arası 5px boşluk
-        #uçuş modu seçimi
-        label3 = QLabel(self)
-        label3.setText("Uçuş modunu değiştir")
-        label3.setGeometry(window_width - 295, map_height + 95, 200, 20)
-        button3 = QPushButton("Onayla", self)
-        button3.setGeometry(window_width - 75, map_height + 95, 65, 20)  # butonlar arası 5px boşluk
-        #uçuş modları
-        radio1 = QRadioButton("Otonom Kalkis",self)
-        radio1.setGeometry(window_width - 245, map_height + 120, 150, 20)
-
-        radio2 = QRadioButton("Otonom İniş", self)
-        radio2.setGeometry(window_width - 245, map_height + 145, 150, 20)
-
-        radio3 = QRadioButton("Otonom Uçuş", self)
-        radio3.setGeometry(window_width - 245, map_height + 170, 150, 20)
-
-        radio4 = QRadioButton("Bul ve Takip Et", self)
-        radio4.setGeometry(window_width - 245, map_height + 195, 150, 20)
-
-        radio5 = QRadioButton("Kamikaze", self)
-        radio5.setGeometry(window_width - 245, map_height + 220, 150, 20)
-        # -------Control Panel Elements--------#
-
-
-
-    def clickme(self):
-        # printing pressed
-        print("pressed")
 
     def closeEvent(self, event):
         self.thread.stop()
