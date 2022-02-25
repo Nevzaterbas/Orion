@@ -77,7 +77,14 @@ class Window(QWidget):
         # self.timer.setInterval(1000)  # in milliseconds, so 5000 = 5 seconds
         # self.timer.timeout.connect(self.UiDisplayTime) # her saniye bitişinde gidipp çağırır
         # self.timer.start()
-        #camerada da sürekli bir güncelleme var. bunu engelliyor olabilir
+        # camerada da sürekli bir güncelleme var. bunu engelliyor olabilir
+        # başka bir yolda en alttaki ana döngüyü while içine alıp
+        # biz kapatana kadar çalışmasını sağlamak.
+        # ancak işlemciye fazla yüklenip donup kalıyor. sonrasında fazla döndürmeye çalışıp kapanıyor.
+        # çözüm olarak time.sleep(0.100) 100 ms bekleme denedim ancak bunda da kaldırmadı...
+        # şuan için iki çözüm yolu var ya telemetriden veri geldiğinde biz güncelleme yapıcağız yada
+        # asenkron bir fonksiyon ile sürekli olarak saniye başına güncellicek.
+        # eğer gelen veriye göre yaparsak kamera verilerini de etkilememiş olur sadece veri çıktılarını güncelleriz.
 
     # method for widgets
     def UiDisplayTime(self):
