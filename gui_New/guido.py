@@ -9,6 +9,11 @@ import cv2
 import numpy as np
 import io
 import folium
+from dronekit import connect
+
+location = "/dev/ttyACM0"
+bitrate = 115200 * 1
+vehicle = None
 
 #coordinates
 coordinate_x = 41.005858 #enlem
@@ -42,7 +47,7 @@ class VideoThread(QThread):
         self._run_flag = True
 
     def run(self):
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        cap = cv2.VideoCapture(0)
         while self._run_flag:
             ret, cv_img = cap.read()
             if ret: self.change_pixmap_signal.emit(cv_img)
@@ -208,24 +213,35 @@ class Window(QWidget):
         textlabel10.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 120, 250, 22)
 
         textbox5 = QLineEdit(self)
+        textbox5.setText("/dev/ttyACM0")
         textbox5.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 95, 95, 20)
         baglan_button = QPushButton("bağlan", self)
         baglan_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 95, 65,20)  # butonlar arası 5px boşluk
 
 
         textbox6 = QLineEdit(self)
+        textbox6.setText("115200")
         textbox6.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 120, 95, 20)
-        baglan2_button = QPushButton("bağlan2", self)
+        baglan2_button = QPushButton("kes", self)
         baglan2_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 120, 65,20)  # butonlar arası 5px boşluk
 
+        def baglan():
+            location = textbox5.text()
+            print("location: " + location)
+            bitrate = textbox6.text() * 1
+            print("bitrate: " + bitrate)
+            vehicle = connect(location, wait_ready=True, baud=bitrate)
+            print("Mode: %s" % vehicle.mode.name)
 
+        def baglan2():
+            print("hi")
         # adding action to a button
         coordinate_button.clicked.connect(self.koordinat_gonder)
         hiz_button.clicked.connect(self.hiz_gonder)
         irtifa_button.clicked.connect(self.irtifa_gonder)
         onayla_button.clicked.connect(self.ucus_modunu_gonder)
-        baglan_button.clicked.connect(self.baglan)
-        baglan2_button.clicked.connect(self.baglan2)
+        baglan_button.clicked.connect(baglan)
+        baglan2_button.clicked.connect(baglan2)
 
     def UiLivePannel(self):
         # -------Map Elements--------#
@@ -283,21 +299,6 @@ class Window(QWidget):
         else:
             print('No clicked.')
 
-    def baglan(self):
-        BR = QMessageBox.question(self, 'Mission Planner Message',"dogrula ?",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if BR == QMessageBox.Yes:
-            print('Yes clicked.')
-        else:
-            print('No clicked.')
-
-    def baglan2(self):
-        BR = QMessageBox.question(self, 'Mission Planner Message',"dogrula ?",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if BR == QMessageBox.Yes:
-            print('Yes clicked.')
-        else:
-            print('No clicked.')
 
     def hiz_gonder(self):
         BR = QMessageBox.question(self, 'Mission Planner Message', "hızı değiştir ?",
