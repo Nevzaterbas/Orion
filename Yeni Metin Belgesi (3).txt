@@ -1,0 +1,146 @@
+# importing libraries
+from PyQt5 import QtGui
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+import sys, os
+import cv2
+import numpy as np
+import io
+import folium
+from folium import plugins
+
+class VideoThread(
+    QThread):  # bu thread  gui donmasın diye yazılmıs,bir tuşa bastın o tus görevini bitirene kadar gui donar bunun olmaması için yazılır
+    change_pixmap_signal = pyqtSignal(np.ndarray)
+
+    def __init__(self):
+        super().__init__()
+        self._run_flag = True
+
+    def run(self):
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+        while self._run_flag:
+            ret, cv_img = cap.read()
+            if ret: self.change_pixmap_signal.emit(cv_img)
+        cap.release()
+
+    def stop(self):
+        self._run_flag = False
+        self.wait()
+
+
+class Window(QWidget):
+    def __init__(self):
+        super().__init__()
+        # setting title
+        self.setWindowTitle("Python ")
+        # setting geometry
+        self.setGeometry(100, 100, 640, 480)
+        # calling methods
+        self.UiComponents()
+
+    # method for widgets
+
+    def UiComponents(self):
+        # --------------------------------------------------------#
+        # label2 = QLabel(self)
+        # pixmap2 = QPixmap('image2.png')
+        # label2.setPixmap(pixmap2)
+        # label2.setGeometry(0, 0, pixmap2.width(), pixmap2.height())
+        # --------------------------------------------------------#
+        # label = QLabel(self)
+        # pixmap = QPixmap('image.png')
+        # label.setPixmap(pixmap)
+        # label.setGeometry(0 + 10, 0, pixmap.width(), pixmap.height())
+        # --------------------------------------------------------#
+
+        # -------Map Elements--------#
+        webView = QWebEngineView(self)
+        webView.setGeometry(300, 10, 600, 600)  # map in konumu x,y, width,height
+
+
+        ################################
+        map_measure = folium.Map([40, -100], zoom_start=4)
+        # measure control
+        measure_control = plugins.MeasureControl(position='topleft',
+                                                 active_color='red',
+                                                 completed_color='red',
+                                                 primary_length_unit='miles')
+        # add measure control to map
+        map_measure.add_child(measure_control)
+        # display map
+
+        data = io.BytesIO()
+        map_measure.save(data, close_file=False)
+        webView.setHtml(data.getvalue().decode())
+
+
+        # -------Map Elements--------#
+
+        # -------Video Elements--------#
+        self.image_label = QLabel(self)
+        self.image_label.setGeometry(0, 0, 300, 300)
+        self.image_label.setContentsMargins(10, 0, 10, 10)  # edgelerden bırakılan boşluklar
+
+        # gui üzerindeki boyut ve konum belirler
+        vbox = QVBoxLayout()
+        self.setLayout(vbox)
+        self.thread = VideoThread()
+        self.thread.change_pixmap_signal.connect(self.update_image)
+        self.thread.start()
+        # -------Video Elements--------#
+
+        # creating a push button
+        button = QPushButton("CLICK", self)
+        button.setGeometry(50, 300 + 25, 100, 40)
+
+        button2 = QPushButton("CLICK2", self)
+        button2.setGeometry(200, 300 + 25, 100, 40)
+
+        # adding action to a button
+        button.clicked.connect(self.clickme)
+        button2.clicked.connect(self.clickme)
+
+        but1 = QPushButton("deneme", self)
+        but1.setGeometry(200, 350 + 25, 100, 40)
+        but1.clicked.connect(self.click1)
+
+    def click1(self):
+        pass
+
+    def clickme(self):
+        # printing pressed
+        print("pressed")
+
+    def closeEvent(self, event):
+        self.thread.stop()
+        event.accept()
+
+    @pyqtSlot(np.ndarray)
+    def update_image(self, cv_img):
+        qt_img = self.convert_cv_qt(cv_img)
+        self.image_label.setPixmap(qt_img)
+
+    def convert_cv_qt(self, cv_img):
+        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        # burdaki değişkenler videonun çözünürlüğünü belirler
+        # video elementin içindekiler ise videnun ne kadarının
+        # gösterileceğini söyler(guide kapladığı yer)
+        p = convert_to_Qt_format.scaled(350, 300, Qt.KeepAspectRatio)
+        return QPixmap.fromImage(p)
+
+
+if __name__ == "__main__":
+    # create pyqt5 app
+    App = QApplication(sys.argv)
+    # create the instance of our Window
+    window = Window()
+    window.show()
+    # start the app
+    sys.exit(App.exec())
