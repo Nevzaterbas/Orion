@@ -71,7 +71,13 @@ class Window(QWidget):
         self.UiControlPannel()
         self.UiInformationPannel()
         self.UiDisplayTime()
-        #saati sadece başladığında güncelliyor nasıl sürekli güncelleyeceğimi bilmiyorum.
+
+        # self.timer = QTimer(self)
+        # self.timer.setSingleShot(False)
+        # self.timer.setInterval(1000)  # in milliseconds, so 5000 = 5 seconds
+        # self.timer.timeout.connect(self.UiDisplayTime) # her saniye bitişinde gidipp çağırır
+        # self.timer.start()
+        #camerada da sürekli bir güncelleme var. bunu engelliyor olabilir
 
     # method for widgets
     def UiDisplayTime(self):
