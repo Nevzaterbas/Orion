@@ -63,7 +63,8 @@ class Window(QWidget):
     def __init__(self):
         super().__init__()
         # setting title
-        self.setWindowTitle("Python ")
+        self.setStyleSheet("background-color:#E90042")
+        self.setWindowTitle("Deneb")
         # setting geometry
         self.setGeometry(50, 50, window_width, window_height)
         # calling methods
@@ -139,10 +140,13 @@ class Window(QWidget):
         textlabel6.setGeometry(camera_location_x, camera_height + camera_location_y + 120, 250, 22)
 
         textlabel7 = QLabel(self)
-        irtifa_degeri = 12
-        textlabel7.setText("Aracın pil durumu: %" + str(irtifa_degeri))
+        pil_seviyesi = 57
+        textlabel7.setText("Aracın pil durumu:")
         textlabel7.setFont(myFont2)
-        textlabel7.setGeometry(camera_location_x+250, camera_height + camera_location_y + 20, 250, 22)
+        textlabel7.setGeometry(camera_location_x+250, camera_height + camera_location_y + 20, 120, 22)
+        pbar = QProgressBar(self)
+        pbar.setGeometry(camera_location_x+370, camera_height + camera_location_y + 20, 165, 19)
+        pbar.setValue(pil_seviyesi)
 
         textlabel8 = QLabel(self)
         telemetri_durumu = 12
@@ -230,14 +234,14 @@ class Window(QWidget):
         textbox5.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 95, 95, 20)
         baglan_button = QPushButton("bağlan", self)
         baglan_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 95, 65,20)  # butonlar arası 5px boşluk
-
+        baglan_button.setStyleSheet("background-color:darkgreen")
 
         textbox6 = QLineEdit(self)
         textbox6.setText("115200")
         textbox6.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 120, 95, 20)
         baglan2_button = QPushButton("kes", self)
         baglan2_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 120, 65,20)  # butonlar arası 5px boşluk
-
+        baglan2_button.setStyleSheet("background-color:red")
         def baglan():
             location = textbox5.text()
             print("location: " + location)
