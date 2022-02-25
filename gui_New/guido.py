@@ -138,8 +138,16 @@ class Window(QWidget):
         textlabel8.setFont(myFont2)
         textlabel8.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 70, 250, 22)
 
+        textlabel9 = QLabel(self)
+        textlabel9.setText("bağlanma:")
+        textlabel9.setFont(myFont2)
+        textlabel9.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 95, 250, 22)
+
+
+
     def UiControlPannel(self):
 
+        myFont2 = QtGui.QFont('Arial', 11)
         control_pannel_button_x = int(window_width - 75)
         control_pannel_textbox_x = int(window_width - 187)
         control_pannel_text_x = int(window_width - 335)
@@ -193,11 +201,31 @@ class Window(QWidget):
         textbox4.setGeometry(control_pannel_text_x+155, map_height + 210+ map_location_y, 100, 20)
         # -------Control Panel Elements--------#
 
+        textlabel10 = QLabel(self)
+        ucus_suresi = 12
+        textlabel10.setText("bitrate:")
+        textlabel10.setFont(myFont2)
+        textlabel10.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 120, 250, 22)
+
+        textbox5 = QLineEdit(self)
+        textbox5.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 95, 95, 20)
+        baglan_button = QPushButton("bağlan", self)
+        baglan_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 95, 65,20)  # butonlar arası 5px boşluk
+
+
+        textbox6 = QLineEdit(self)
+        textbox6.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 120, 95, 20)
+        baglan2_button = QPushButton("bağlan2", self)
+        baglan2_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 120, 65,20)  # butonlar arası 5px boşluk
+
+
         # adding action to a button
         coordinate_button.clicked.connect(self.koordinat_gonder)
         hiz_button.clicked.connect(self.hiz_gonder)
         irtifa_button.clicked.connect(self.irtifa_gonder)
         onayla_button.clicked.connect(self.ucus_modunu_gonder)
+        baglan_button.clicked.connect(self.baglan)
+        baglan2_button.clicked.connect(self.baglan2)
 
     def UiLivePannel(self):
         # -------Map Elements--------#
@@ -249,6 +277,22 @@ class Window(QWidget):
     #Button events ...
     def koordinat_gonder(self):
         BR = QMessageBox.question(self, 'Mission Planner Message',"koordinati değiştir ?",
+                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if BR == QMessageBox.Yes:
+            print('Yes clicked.')
+        else:
+            print('No clicked.')
+
+    def baglan(self):
+        BR = QMessageBox.question(self, 'Mission Planner Message',"dogrula ?",
+                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if BR == QMessageBox.Yes:
+            print('Yes clicked.')
+        else:
+            print('No clicked.')
+
+    def baglan2(self):
+        BR = QMessageBox.question(self, 'Mission Planner Message',"dogrula ?",
                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if BR == QMessageBox.Yes:
             print('Yes clicked.')
