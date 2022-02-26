@@ -13,7 +13,7 @@ from dronekit import connect
 import serial
 import time
 
-location = "/dev/ttyACM0"
+location = "COM3"
 bitrate = 57600 * 1
 vehicle = None
 pil_seviyesi = 0
