@@ -71,7 +71,7 @@ class Window(QWidget):
         # setting geometry
         self.setGeometry(50, 50, window_width, window_height)
         # calling methods
-        self.UiLivePannel()
+        #self.UiLivePannel()
         self.UiControlPannel()
         self.UiInformationPannel()
         self.UiDisplayTime()
@@ -104,14 +104,6 @@ class Window(QWidget):
 
     def UiInformationPannel(self):
 
-        #UÇUŞ MODU GÖSTERGESİ
-        textlabel = QLabel(self)
-        ucus_modu = "1234"
-        textlabel.setText("Aracın Uçuş Modu:" + str(ucus_modu))
-        myFont = QtGui.QFont('Arial', 22)
-        myFont.setBold(True)
-        textlabel.setFont(myFont)
-        textlabel.setGeometry(14, 10, int(window_width / 2), 35)
 
         list = QListWidget(self)
         list.setGeometry(14, 50, 150, 555)
@@ -168,8 +160,6 @@ class Window(QWidget):
 
     def UiControlPannel(self):
 
-
-
         myFont2 = QtGui.QFont('Arial', 11)
         control_pannel_button_x = int(window_width - 75)
         control_pannel_textbox_x = int(window_width - 187)
@@ -183,6 +173,7 @@ class Window(QWidget):
         textbox1.setGeometry(control_pannel_textbox_x, map_height + 10+ map_location_y, 100, 20)
         coordinate_button = QPushButton("Gönder", self)
         coordinate_button.setGeometry(control_pannel_button_x, map_height + 10+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+
         # araç hızını değiştir
         label2 = QLabel(self)
         label2.setText("Hızı değiştir")
@@ -191,6 +182,7 @@ class Window(QWidget):
         textbox2.setGeometry(control_pannel_textbox_x, map_height + 35+ map_location_y, 100, 20)
         hiz_button = QPushButton("Gönder", self)
         hiz_button.setGeometry(control_pannel_button_x, map_height + 35+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+
         # araç irtifasını değiştir
         label3 = QLabel(self)
         label3.setText("İrtifa değiştir")
@@ -199,12 +191,14 @@ class Window(QWidget):
         textbox3.setGeometry(control_pannel_textbox_x, map_height + 60+ map_location_y, 100, 20)
         irtifa_button = QPushButton("Gönder", self)
         irtifa_button.setGeometry(control_pannel_button_x, map_height + 60+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+
         # uçuş modu seçimi
         label3 = QLabel(self)
         label3.setText("Uçuş modunu değiştir")
         label3.setGeometry(control_pannel_text_x, map_height + 85+ map_location_y, 200, 20)
         onayla_button = QPushButton("Onayla", self)
         onayla_button.setGeometry(control_pannel_button_x, map_height + 85+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
+
         # uçuş modları
         radio1 = QRadioButton("Otonom Kalkis", self)
         radio1.setGeometry(control_pannel_text_x+50, map_height + 110+ map_location_y, 150, 20)
@@ -224,6 +218,7 @@ class Window(QWidget):
         textbox4.setGeometry(control_pannel_text_x+155, map_height + 210+ map_location_y, 100, 20)
         # -------Control Panel Elements--------#
 
+        #----------information pannel elements---------#
         textlabel10 = QLabel(self)
         ucus_suresi = 12
         textlabel10.setText("bitrate:")
@@ -251,8 +246,19 @@ class Window(QWidget):
 
         pbar = QProgressBar(self)
         pbar.setGeometry(camera_location_x + 370, camera_height + camera_location_y + 20, 165, 19)
-        pbar.setValue(pil_seviyesi)
+        #pbar.setValue(pil_seviyesi)
 
+        # UÇUŞ MODU GÖSTERGESİ
+        textlabel = QLabel(self)
+        ucus_modu = "unkown"
+        textlabel.setText("Aracın Uçuş Modu:" + str(ucus_modu))
+        myFont = QtGui.QFont('Arial', 22)
+        myFont.setBold(True)
+        textlabel.setFont(myFont)
+        textlabel.setGeometry(14, 10, int(window_width / 2), 35)
+
+
+        # ----------information pannel elements---------#
 
         def baglan():
             location = textbox5.text()
@@ -263,8 +269,10 @@ class Window(QWidget):
             print("Mode: %s" % vehicle.mode.name)
             print("Groundspeed: %s" % vehicle.groundspeed)
             print("Battery: %s" % vehicle.battery.level)
-
+            baglan_button.setEnabled(False)
             self.pil_seviyesi = vehicle.battery.level
+            self.ucus_modu = vehicle.mode.name
+            #print(self.pil_seviyesi)
             timer = QTimer(self)
             timer.timeout.connect(goster)
             timer.start(1000)
@@ -274,8 +282,9 @@ class Window(QWidget):
             print("hi")
 
         def goster():
-            print(self.pil_seviyesi)
+            #print(self.pil_seviyesi)
             pbar.setValue(self.pil_seviyesi)
+            textlabel.setText("Aracın Uçuş Modu:" + str(self.ucus_modu))
 
 
         # adding action to a button
