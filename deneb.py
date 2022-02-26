@@ -410,5 +410,6 @@ if __name__=="__main__":
     # create the instance of our Window
     window = Window()
     window.show()
+    App.setWindowIcon(QtGui.QIcon("iha.png"))
     # start the app
     sys.exit(App.exec())
