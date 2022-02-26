@@ -23,7 +23,7 @@ coordinate_x = 41.005858 #enlem
 coordinate_y = 29.009490 #boylam
 
 #window
-window_width = 945
+window_width = 1280
 window_height = 630
 
 #map
@@ -40,18 +40,7 @@ camera_location_y = int(50)
 camera_width_resolution = int(camera_width+55)
 camera_height_resolution = int(camera_height)
 
-class InfoThread(QThread):
-    def __init__(self):
-        super().__init__()
-        self._run_flag = True
 
-    def run(self):
-        while 1:
-            print("hi")
-            time.sleep(1)
-    def stop(self):
-        self._run_flag = False
-        self.wait()
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -61,7 +50,7 @@ class VideoThread(QThread):
         self._run_flag = True
 
     def run(self):
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
         while self._run_flag:
             ret, cv_img = cap.read()
             if ret: self.change_pixmap_signal.emit(cv_img)
@@ -124,6 +113,9 @@ class Window(QWidget):
         textlabel.setFont(myFont)
         textlabel.setGeometry(14, 10, int(window_width / 2), 35)
 
+        list = QListWidget(self)
+        list.setGeometry(14, 50, 150, 555)
+        list.setStyleSheet("background-color:#FFF")
         #information pannel(bilgi paneli)
         textlabel2 = QLabel(self)
         yer_hiz_degeri = 1234
@@ -256,6 +248,7 @@ class Window(QWidget):
         textlabel7.setText("Aracın pil durumu:")
         textlabel7.setFont(myFont2)
         textlabel7.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 20, 120, 22)
+
         pbar = QProgressBar(self)
         pbar.setGeometry(camera_location_x + 370, camera_height + camera_location_y + 20, 165, 19)
         pbar.setValue(pil_seviyesi)
@@ -271,10 +264,20 @@ class Window(QWidget):
             print("Groundspeed: %s" % vehicle.groundspeed)
             print("Battery: %s" % vehicle.battery.level)
 
+            self.pil_seviyesi = vehicle.battery.level
+            timer = QTimer(self)
+            timer.timeout.connect(goster)
+            timer.start(1000)
+
+
         def baglan2():
             print("hi")
-            self.thread[1].stop()
-            self.pushButton.setEnabled(True)
+
+        def goster():
+            print(self.pil_seviyesi)
+            pbar.setValue(self.pil_seviyesi)
+
+
         # adding action to a button
         coordinate_button.clicked.connect(self.koordinat_gonder)
         hiz_button.clicked.connect(self.hiz_gonder)
@@ -306,15 +309,15 @@ class Window(QWidget):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
         self.thread = VideoThread()
-        self.thread2 = InfoThread()
+        #self.thread2 = InfoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
-        self.thread2.start()
+        #self.thread2.start()
         # -------Video Elements--------#
 
     def closeEvent(self, event):
         self.thread.stop()
-        self.thread2.stop()
+        #self.thread2.stop()
         event.accept()
 
     @pyqtSlot(np.ndarray)
