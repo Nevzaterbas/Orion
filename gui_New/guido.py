@@ -1,5 +1,5 @@
 # importing libraries
-from PyQt5 import QtGui
+from PyQt5 import QtGui , QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -10,10 +10,13 @@ import numpy as np
 import io
 import folium
 from dronekit import connect
+import serial
+import time
 
 location = "/dev/ttyACM0"
-bitrate = 115200 * 1
+bitrate = 57600 * 1
 vehicle = None
+pil_seviyesi = 0
 
 #coordinates
 coordinate_x = 41.005858 #enlem
@@ -37,7 +40,18 @@ camera_location_y = int(50)
 camera_width_resolution = int(camera_width+55)
 camera_height_resolution = int(camera_height)
 
+class InfoThread(QThread):
+    def __init__(self):
+        super().__init__()
+        self._run_flag = True
 
+    def run(self):
+        while 1:
+            print("hi")
+            time.sleep(1)
+    def stop(self):
+        self._run_flag = False
+        self.wait()
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
@@ -103,12 +117,12 @@ class Window(QWidget):
 
         #UÇUŞ MODU GÖSTERGESİ
         textlabel = QLabel(self)
-        ucus_modu = 1234
-        textlabel.setText("Aracın Uçuş Modu:"+str(ucus_modu))
+        ucus_modu = "1234"
+        textlabel.setText("Aracın Uçuş Modu:" + str(ucus_modu))
         myFont = QtGui.QFont('Arial', 22)
         myFont.setBold(True)
         textlabel.setFont(myFont)
-        textlabel.setGeometry(14,10,int(window_width/2),35)
+        textlabel.setGeometry(14, 10, int(window_width / 2), 35)
 
         #information pannel(bilgi paneli)
         textlabel2 = QLabel(self)
@@ -139,14 +153,7 @@ class Window(QWidget):
         textlabel6.setFont(myFont2)
         textlabel6.setGeometry(camera_location_x, camera_height + camera_location_y + 120, 250, 22)
 
-        textlabel7 = QLabel(self)
-        pil_seviyesi = 57
-        textlabel7.setText("Aracın pil durumu:")
-        textlabel7.setFont(myFont2)
-        textlabel7.setGeometry(camera_location_x+250, camera_height + camera_location_y + 20, 120, 22)
-        pbar = QProgressBar(self)
-        pbar.setGeometry(camera_location_x+370, camera_height + camera_location_y + 20, 165, 19)
-        pbar.setValue(pil_seviyesi)
+
 
         textlabel8 = QLabel(self)
         telemetri_durumu = 12
@@ -168,6 +175,8 @@ class Window(QWidget):
 
 
     def UiControlPannel(self):
+
+
 
         myFont2 = QtGui.QFont('Arial', 11)
         control_pannel_button_x = int(window_width - 75)
@@ -230,28 +239,42 @@ class Window(QWidget):
         textlabel10.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 120, 80, 22)
 
         textbox5 = QLineEdit(self)
-        textbox5.setText("/dev/ttyACM0")
+        textbox5.setText(location)
         textbox5.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 95, 95, 20)
         baglan_button = QPushButton("bağlan", self)
         baglan_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 95, 65,20)  # butonlar arası 5px boşluk
         baglan_button.setStyleSheet("background-color:darkgreen")
 
         textbox6 = QLineEdit(self)
-        textbox6.setText("115200")
+        textbox6.setText(str(bitrate))
         textbox6.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 120, 95, 20)
         baglan2_button = QPushButton("kes", self)
         baglan2_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 120, 65,20)  # butonlar arası 5px boşluk
         baglan2_button.setStyleSheet("background-color:red")
+
+        textlabel7 = QLabel(self)
+        textlabel7.setText("Aracın pil durumu:")
+        textlabel7.setFont(myFont2)
+        textlabel7.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 20, 120, 22)
+        pbar = QProgressBar(self)
+        pbar.setGeometry(camera_location_x + 370, camera_height + camera_location_y + 20, 165, 19)
+        pbar.setValue(pil_seviyesi)
+
+
         def baglan():
             location = textbox5.text()
             print("location: " + location)
             bitrate = textbox6.text() * 1
             print("bitrate: " + bitrate)
-            vehicle = connect(location, wait_ready=True, baud=bitrate)
+            vehicle = connect(location, wait_ready=False, baud=bitrate)
             print("Mode: %s" % vehicle.mode.name)
+            print("Groundspeed: %s" % vehicle.groundspeed)
+            print("Battery: %s" % vehicle.battery.level)
 
         def baglan2():
             print("hi")
+            self.thread[1].stop()
+            self.pushButton.setEnabled(True)
         # adding action to a button
         coordinate_button.clicked.connect(self.koordinat_gonder)
         hiz_button.clicked.connect(self.hiz_gonder)
@@ -283,12 +306,15 @@ class Window(QWidget):
         vbox = QVBoxLayout()
         self.setLayout(vbox)
         self.thread = VideoThread()
+        self.thread2 = InfoThread()
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
+        self.thread2.start()
         # -------Video Elements--------#
 
     def closeEvent(self, event):
         self.thread.stop()
+        self.thread2.stop()
         event.accept()
 
     @pyqtSlot(np.ndarray)
