@@ -17,6 +17,12 @@ location = "COM3"
 bitrate = 57600 * 1
 vehicle = None
 pil_seviyesi = 0
+ucus_modu = "unkown"
+yer_hiz_degeri = 0
+hava_hiz_degeri = 0
+telemetri_durumu = 0
+sistem_saati = 0
+
 
 #coordinates
 coordinate_x = 41.005858 #enlem
@@ -74,7 +80,6 @@ class Window(QWidget):
         #self.UiLivePannel()
         self.UiControlPannel()
         self.UiInformationPannel()
-        self.UiDisplayTime()
 
         # self.timer = QTimer(self)
         # self.timer.setSingleShot(False)
@@ -91,36 +96,17 @@ class Window(QWidget):
         # eğer gelen veriye göre yaparsak kamera verilerini de etkilememiş olur sadece veri çıktılarını güncelleriz.
 
     # method for widgets
-    def UiDisplayTime(self):
-        # SİSTEM SAATİ GÖSTERGESİ
-        textlabel = QLabel(self)
-        time = QTime.currentTime()
-        sistem_saati = time.toString('hh:mm:ss')
-        textlabel.setText("Sistem Saati:" + sistem_saati)
-        myFont = QtGui.QFont('Arial', 22)
-        myFont.setBold(True)
-        textlabel.setFont(myFont)
-        textlabel.setGeometry(int(window_width - 300), 10, int(window_width / 2), 35)
 
     def UiInformationPannel(self):
 
-
+        myFont2 = QtGui.QFont('Arial', 11)
         list = QListWidget(self)
         list.setGeometry(14, 50, 150, 555)
         list.setStyleSheet("background-color:#FFF")
         #information pannel(bilgi paneli)
-        textlabel2 = QLabel(self)
-        yer_hiz_degeri = 1234
-        textlabel2.setText("Aracın Yer Hızı Degeri: "+str(yer_hiz_degeri))
-        myFont2 = QtGui.QFont('Arial', 11)
-        textlabel2.setFont(myFont2)
-        textlabel2.setGeometry(camera_location_x,camera_height+camera_location_y+20,250,22)
 
-        textlabel3 = QLabel(self)
-        hava_hiz_degeri = 1234
-        textlabel3.setText("Aracın Hava Hızı Degeri: "+str(hava_hiz_degeri))
-        textlabel3.setFont(myFont2)
-        textlabel3.setGeometry(camera_location_x,camera_height+camera_location_y+45,250,22)
+
+
 
         textlabel4 = QLabel(self)
         textlabel5 = QLabel(self)
@@ -139,11 +125,7 @@ class Window(QWidget):
 
 
 
-        textlabel8 = QLabel(self)
-        telemetri_durumu = 12
-        textlabel8.setText("telemetri durumu: " + str(telemetri_durumu))
-        textlabel8.setFont(myFont2)
-        textlabel8.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 45, 250, 22)
+
 
         textlabel8 = QLabel(self)
         ucus_suresi = 12
@@ -216,11 +198,10 @@ class Window(QWidget):
         textbox4.setGeometry(control_pannel_text_x+50, map_height + 210+ map_location_y, 100, 20)
         textbox4 = QLineEdit(self)
         textbox4.setGeometry(control_pannel_text_x+155, map_height + 210+ map_location_y, 100, 20)
-        # -------Control Panel Elements--------#
 
-        #----------information pannel elements---------#
+
+
         textlabel10 = QLabel(self)
-        ucus_suresi = 12
         textlabel10.setText("bitrate:")
         textlabel10.setFont(myFont2)
         textlabel10.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 120, 80, 22)
@@ -238,6 +219,34 @@ class Window(QWidget):
         baglan2_button = QPushButton("kes", self)
         baglan2_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 120, 65,20)  # butonlar arası 5px boşluk
         baglan2_button.setStyleSheet("background-color:red")
+        # -------Control Panel Elements--------#
+
+
+        # ----------information panel elements---------#
+
+        # SİSTEM SAATİ GÖSTERGESİ
+        textlabel20 = QLabel(self)
+        textlabel20.setText("Sistem Saati:unkown")
+        myFont = QtGui.QFont('Arial', 22)
+        myFont.setBold(True)
+        textlabel20.setFont(myFont)
+        textlabel20.setGeometry(control_pannel_text_x, 10, int(window_width / 2), 35)
+
+        textlabel8 = QLabel(self)
+        textlabel8.setText("last heartbeat: unkown")
+        textlabel8.setFont(myFont2)
+        textlabel8.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 45, 250, 22)
+
+        textlabel3 = QLabel(self)
+        textlabel3.setText("Aracın Hava Hızı Degeri: unkown")
+        textlabel3.setFont(myFont2)
+        textlabel3.setGeometry(camera_location_x,camera_height+camera_location_y+45,250,22)
+
+        textlabel2 = QLabel(self)
+        textlabel2.setText("Aracın Yer Hızı Degeri: unkown" )
+        myFont2 = QtGui.QFont('Arial', 11)
+        textlabel2.setFont(myFont2)
+        textlabel2.setGeometry(camera_location_x, camera_height + camera_location_y + 20, 250, 22)
 
         textlabel7 = QLabel(self)
         textlabel7.setText("Aracın pil durumu:")
@@ -246,19 +255,19 @@ class Window(QWidget):
 
         pbar = QProgressBar(self)
         pbar.setGeometry(camera_location_x + 370, camera_height + camera_location_y + 20, 165, 19)
-        #pbar.setValue(pil_seviyesi)
+        pbar.setValue(100)
 
         # UÇUŞ MODU GÖSTERGESİ
         textlabel = QLabel(self)
-        ucus_modu = "unkown"
-        textlabel.setText("Aracın Uçuş Modu:" + str(ucus_modu))
+        textlabel.setText("Aracın Uçuş Modu: unkown")
         myFont = QtGui.QFont('Arial', 22)
         myFont.setBold(True)
         textlabel.setFont(myFont)
         textlabel.setGeometry(14, 10, int(window_width / 2), 35)
 
 
-        # ----------information pannel elements---------#
+
+        # ----------information panel elements---------#
 
         def baglan():
             location = textbox5.text()
@@ -270,12 +279,19 @@ class Window(QWidget):
             print("Groundspeed: %s" % vehicle.groundspeed)
             print("Battery: %s" % vehicle.battery.level)
             baglan_button.setEnabled(False)
-            self.pil_seviyesi = vehicle.battery.level
+            print("gps: %s" % vehicle.gps_0)
+
+
             self.ucus_modu = vehicle.mode.name
-            #print(self.pil_seviyesi)
+            self.yer_hiz_degeri = vehicle.groundspeed
+            self.hava_hiz_degeri = vehicle.airspeed
+            self.telemetri_durumu = vehicle.last_heartbeat
+            self.pil_seviyesi = vehicle.battery.level
+
             timer = QTimer(self)
             timer.timeout.connect(goster)
-            timer.start(1000)
+            timer.start(500)
+
 
 
         def baglan2():
@@ -283,9 +299,15 @@ class Window(QWidget):
 
         def goster():
             #print(self.pil_seviyesi)
+            time = QTime.currentTime()
+            self.sistem_saati = time
+            self.sistem_saati = time.toString('hh:mm:ss')
             pbar.setValue(self.pil_seviyesi)
             textlabel.setText("Aracın Uçuş Modu:" + str(self.ucus_modu))
-
+            textlabel2.setText("Aracın Yer Hızı Degeri: " + str(self.yer_hiz_degeri))
+            textlabel3.setText("Aracın Hava Hızı Degeri: "+ str(self.hava_hiz_degeri))
+            textlabel8.setText("last heartbeat: "+ str(self.hava_hiz_degeri))
+            textlabel20.setText("Sistem Saati: "+ str(self.sistem_saati))
 
         # adding action to a button
         coordinate_button.clicked.connect(self.koordinat_gonder)
