@@ -19,19 +19,22 @@ import serial
 import time
 from PyQt5.QtGui import QFont, QFontDatabase
 
-connection_location = ""
+
+global connection_location
+global connection_bitrate
+connection_location = "COM3"
 connection_bitrate = 57600
 
-sitl = dronekit_sitl.start_default()
-connection_location = sitl.connection_string()
+coordinate_lat = 41.005858
+coordinate_lon = 29.009490
+
+# sitl connection.
+# sitl = dronekit_sitl.start_default()
+# connection_location = sitl.connection_string()
 
 text_color = "color:#FFEBCD"
 background_color = "background-color:#09080C"
 button_background_color = "background-color:#FFEBCD"
-
-
-#os.system("pyuic5 -o interface_ui.py interface.ui")
-#from interface_ui import *
 
 
 class VideoThread(QThread):
@@ -60,12 +63,16 @@ class Deneb(QMainWindow):
 
         #guide bulunan analog göstergelerin setup fonksiyonu
         self.UiGaugeSet()
+        #Widgetları ayarlama
+        self.UiWidgetSet()
         #guideki bağlan butonu
         self.ConnectButton()
         #guideki güncel sistem saati
         self.UiClock()
         #set backgrounds and colors
         self.SetTheme()
+        #map
+        self.UiMapPanel()
 
     def UiClock(self):
         self.screenTimer = QTimer()
@@ -83,45 +90,47 @@ class Deneb(QMainWindow):
         self.kes_button.clicked.connect(self.Disconnect)
         
     def Connect(self):
+
         self.baglan_button.setEnabled(False)
-        print("Connecting to vehicle on: %s" % (connection_location,))
+        print("get baudrate and location")
+        print("done1")
+        connection_location = self.lineEdit_9.text()
+        print("done2")
+        connection_bitrate = self.lineEdit_10.text()
+        print("done3")
         global vehicle
-        vehicle = connect(connection_location , wait_ready = True  )# , baud = connection_bitrate
-        print("Get some vehicle attribute values:")
-        print (" System status: %s" % vehicle.system_status.state)
-        print (" Mode: %s" % vehicle.mode.name)
+        vehicle = connect(connection_location , wait_ready = False , baud = connection_bitrate)
+        print("done4")
         print("Check connection")
-        if vehicle.wait_ready(True):
-            print("Connected")
-            self.UiCamPanel()
-            self.UiWidgetTimer()
-            #self.UiMapPanel()
-            global con_stat
-            con_stat = 1
+        # if vehicle.wait_ready(True):
+        print("Connected")
+        self.UiCamPanel()
+        self.UiWidgetTimer()
+        global con_status
+        con_status = 1
 
     def Disconnect(self):
         print("disconnecting")
-        con_stat = 0
+        con_status = 0
         self.baglan_button.setEnabled(True)
         print("disconnected")
-        sitl.stop()
 
-    
     def UiWidgetTimer(self):
         self.ui_timer = QTimer()
         self.ui_timer.timeout.connect(self.CallReaderWriter)
-        self.ui_timer.start(50)
+        self.ui_timer.start(1000)
 
     def CallReaderWriter(self):
         self.ReadData()
 
     def ReadData(self):
-        if con_stat == 1:
+        if con_status == 1:
 
-            global coordinate_lat
-            global coordinate_lon
-            coordinate_lat = vehicle.location.global_frame.lat  # enlem
-            coordinate_lon = vehicle.location.global_frame.lon  # boylam
+            # global coordinate_lat
+            # global coordinate_lon
+            # coordinate_lat = vehicle.location.global_frame.lat  # enlem
+            # coordinate_lon = vehicle.location.global_frame.lon  # boylam
+            print("done5")
             hava_hiz_degeri = vehicle.airspeed
             yer_hiz_degeri = vehicle.groundspeed
             ucus_modu = vehicle.mode.name
@@ -138,21 +147,20 @@ class Deneb(QMainWindow):
             self.telemetri_volt_label.setText("Telemetri Volt:"+str(telemetri_volt))
             self.heartbeat_label.setText("Last_heartbeat:"+str(heartbeat))
             self.heading_label.setText(" Rota: " + str(heading))
-            self.coordinate_lat_label.setText(" Koordinat_lat:" + str(coordinate_lat))
-            self.coordinate_lon_label.setText(" Koordinat_lon:" + str(coordinate_lon))
+            self.coordinate_lat_label.setText(" Koordinat_lat:")# + str(coordinate_lat)
+            self.coordinate_lon_label.setText(" Koordinat_lon:")# + str(coordinate_lon)
             self.gauge_1.updateValue(yer_hiz_degeri)
             self.gauge_2.updateValue(hava_hiz_degeri)
             self.gauge_3.updateValue(irtifa)
             #self.gauge_4.updateValue(int(surat_degeri))
             #print(surat_degeri)
-            #sürat [vx,vy,vz] olarak geliyor nasıl ekrandagösterilmesi gerekiyor ??
+            #sürat [vx,vy,vz] olarak geliyor
             self.ucus_modu_label.setText("Aracın Uçuş Modu:" + ucus_modu)
             self.pil_seviyesi_pbar.setValue(pil_seviyesi)
             self.pil_voltaji_label.setText(str(pil_voltaji) + "V")
 
-
     def UiMapPanel(self):
-
+        #bakılacak !!!
         self.webView = QWebEngineView()
         self.setLayout(self.layout_map)
         self.layout_map.addWidget(self.webView)
@@ -229,6 +237,12 @@ class Deneb(QMainWindow):
         self.gauge_4.setNeedleColor(R=255, G=0, B=0)
         self.gauge_4.setMouseTracking(False)
 
+    def UiWidgetSet(self):
+        #location gettext = lineEdit_9
+        self.lineEdit_9.setText = connection_location
+        #bitrate gettext = lineEdit_10
+        self.lineEdit_10.setText = connection_bitrate
+
     def SetTheme(self):
 
         self.main_widget.setStyleSheet(background_color)
@@ -275,7 +289,6 @@ class Deneb(QMainWindow):
         self.pushButton_3.setStyleSheet(button_background_color)
         self.pushButton_4.setStyleSheet(button_background_color)
         self.pushButton_5.setStyleSheet(button_background_color)
-
 
 app = QApplication([])
 window = Deneb()
