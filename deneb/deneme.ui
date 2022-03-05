@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1366</width>
+    <width>1316</width>
     <height>399</height>
    </rect>
   </property>
@@ -351,7 +351,11 @@
            </widget>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="layout_map"/>
+           <layout class="QHBoxLayout" name="layout_map" stretch="">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetMinimumSize</enum>
+            </property>
+           </layout>
           </item>
          </layout>
         </item>
@@ -435,8 +439,8 @@
                  <widget class="AnalogGaugeWidget" name="gauge_1" native="true">
                   <property name="minimumSize">
                    <size>
-                    <width>127</width>
-                    <height>0</height>
+                    <width>110</width>
+                    <height>110</height>
                    </size>
                   </property>
                  </widget>
@@ -496,8 +500,8 @@
                  <widget class="AnalogGaugeWidget" name="gauge_2" native="true">
                   <property name="minimumSize">
                    <size>
-                    <width>127</width>
-                    <height>0</height>
+                    <width>110</width>
+                    <height>110</height>
                    </size>
                   </property>
                  </widget>
@@ -557,8 +561,8 @@
                  <widget class="AnalogGaugeWidget" name="gauge_3" native="true">
                   <property name="minimumSize">
                    <size>
-                    <width>127</width>
-                    <height>0</height>
+                    <width>110</width>
+                    <height>110</height>
                    </size>
                   </property>
                  </widget>
@@ -618,8 +622,8 @@
                  <widget class="AnalogGaugeWidget" name="gauge_4" native="true">
                   <property name="minimumSize">
                    <size>
-                    <width>127</width>
-                    <height>0</height>
+                    <width>110</width>
+                    <height>110</height>
                    </size>
                   </property>
                  </widget>
@@ -632,7 +636,7 @@
                  <widget class="QLabel" name="coordinate_lat_label">
                   <property name="minimumSize">
                    <size>
-                    <width>250</width>
+                    <width>200</width>
                     <height>0</height>
                    </size>
                   </property>
@@ -658,7 +662,7 @@
                  <widget class="QLabel" name="coordinate_lon_label">
                   <property name="minimumSize">
                    <size>
-                    <width>250</width>
+                    <width>200</width>
                     <height>0</height>
                    </size>
                   </property>
@@ -684,7 +688,7 @@
                  <widget class="QLabel" name="heading_label">
                   <property name="minimumSize">
                    <size>
-                    <width>250</width>
+                    <width>200</width>
                     <height>0</height>
                    </size>
                   </property>
@@ -1138,16 +1142,6 @@
      </layout>
     </item>
    </layout>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1366</width>
-     <height>21</height>
-    </rect>
-   </property>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
