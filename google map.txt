@@ -213,6 +213,121 @@ if __name__ == "__main__":
 
 
 
+#################################################
+3.final.
+#################################################
+import io
+import sys
+from PyQt5 import QtWidgets, QtWebEngineWidgets
+import folium, io
+from folium import plugins
+import folium
+import io
+import sys
+import json
+from branca.element import Element
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
+from folium.plugins import Draw
+
+arr=[]
+
+class WebEnginePage(QWebEnginePage):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+    def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+        print(msg)  # Check js errors
+        if 'coordinates' in msg:
+            self.parent.handleConsoleMessage(msg)
+
+
+class main(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.ebru()
+
+    def ebru(self):
+        web = QtWebEngineWidgets.QWebEngineView(self)
+        web.setGeometry(30, 10, 500, 500)
+
+        layout = QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
+
+        cor = (41.005858, 29.009490)
+        m = folium.Map(location=cor, tiles="Stamen Terrain", zoom_start=13, )
+        icon = folium.features.CustomIcon("video-photo/para.jpg", icon_size=(30, 30))  # Creating a custom Icon
+        folium.Marker(location=cor, icon=icon).add_to(m)
+        m = self.add_customjs(m)
+        draw = Draw(
+            draw_options={
+                'polyline': True,
+                'rectangle': True,
+                'polygon': True,
+                'circle': False,
+                'marker': True,
+                'circlemarker': False,
+            },
+            edit_options={'edit': False})
+        m.add_child(draw)
+
+
+
+
+
+
+        data = io.BytesIO()
+        m.save(data, close_file=False)
+        self.setGeometry(100, 100, 600, 600)  # screen x,screen y ,pencere x,pencere y
+        page = WebEnginePage(self)
+        web.setPage(page)
+        web.setHtml(data.getvalue().decode())
+        self.setWindowTitle("chart")
+        layout.addWidget(web)
+
+        #### CEATE SELECT  BUTTON
+        self.button_select_point = QtWidgets.QPushButton(self)
+        self.button_select_point.setGeometry(QtCore.QRect(500, 100, 200, 50))
+        self.button_select_point.setText("Select one point")
+        self.button_select_point.clicked.connect(self.clicked_button_select_point)
+        self.label = QtWidgets.QLabel()
+        layout.addWidget(self.button_select_point)
+        layout.addWidget(self.label)
+
+    def clicked_button_select_point(self):
+        print("Clicked")
+        print(arr) # burdada toplu gösteriyoruz sırayla
+
+    def add_customjs(self, map_object):
+        my_js = f"""{map_object.get_name()}.on("click",
+            function(e){{
+                var data = `{{"coordinates": ${{JSON.stringify(e.latlng)}}}}`;
+                console.log(data)}});"""
+        e = Element(my_js)
+        html = map_object.get_root()
+        html.script.get_root().render()
+        # Insert new element or custom JS
+        html.script._children[e.get_name()] = e
+        return map_object
+
+
+    def handleConsoleMessage(self, msg):
+        data = json.loads(msg)
+        lat = data['coordinates']['lat']
+        lng = data['coordinates']['lng']
+        coords = f"latitude: {lat} longitude: {lng}"
+        self.label.setText(coords)
+        print("maymun cordinatları: "+coords)# cordinatlar oldugu gibi burda coords.
+        arr.append([coords])
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    pencere = main()
+    pencere.show()
+    sys.exit(app.exec_())
+
+
 
 
 
