@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="newPrefix">
+    <file>orion_1.png</file>
+    <file>orion_2.png</file>
+    <file>orion_3.png</file>
+    <file>iha.png</file>
+  </qresource>
+</RCC>
