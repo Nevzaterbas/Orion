@@ -1,355 +1,334 @@
-# importing libraries
-from PyQt5 import QtGui , QtCore
+from branca.element import Element
+from dronekit import connect, VehicleMode
+import dronekit
+from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-import sys,os
-import cv2
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PyQt5.QtGui import QFont, QFontDatabase
+from PyQt5 import uic
+import cv2, sys, os, serial,json
 import numpy as np
-import io
-import folium
-from dronekit import connect
-import serial
-import time
+import io, folium, time, SerialCom
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
+from folium.plugins import Draw
+from PyQt5 import QtWidgets, QtWebEngineWidgets
 
-location = "/dev/ttyUSB0"
-bitrate = 57600 * 1
-vehicle = None
-pil_seviyesi = 0
-textcolor = 'color:#ffffff'
-background = "background-color:#455a64"
-
-#coordinates
-coordinate_x = 41.005858 #enlem
-coordinate_y = 29.009490 #boylam
-
-#window
-window_width = 1280
-window_height = 630
-
-#map
-map_width = 355
-map_height = 355
-map_location_x = int(window_width-map_width)
-map_location_y = int(40)
-
-#camera
-camera_width = 550
-camera_height = int((camera_width/4)*3)
-camera_location_x = int((map_location_x-camera_width))
-camera_location_y = int(50)
-camera_width_resolution = int(camera_width+55)
-camera_height_resolution = int(camera_height)
+arr = []
 
 
+class WebEnginePage(QWebEnginePage):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
 
-class VideoThread(QThread):
+    def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+        print(msg)  # Check js errors
+        if 'coordinates' in msg:
+            self.parent.handleConsoleMessage(msg)
+
+
+coordinate_lat = 41.005858
+coordinate_lon = 29.009490
+
+
+# >>>>>>>>>>>>>>>>>>>>ROTA PLANNER WINDOW CLASS<<<<<<<<<<<<<<<<<<<<#
+class MapCommand(QDialog):
+    """map coordinate dialog pannel"""
+
+    def __init__(self, parent=None):
+        background_color = "background-color:#0F0E0E"
+        button_background_color = "background-color:#541212"
+        text_color = "color:#8B9A46"
+        border_color = "#EEEEEE"
+        super().__init__(parent)
+        uic.loadUi("dialog.ui", self)
+        self.UiMap()
+        self.resize(550, 550)
+        self.setStyleSheet(background_color)
+        self.pushButton.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+
+    def UiMap(self):
+        web = QtWebEngineWidgets.QWebEngineView(self)
+        web.setGeometry(30, 10, 500, 500)
+
+        layout = QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
+
+        cor = (41.005858, 29.009490)
+        m = folium.Map(location=cor, tiles="Stamen Terrain", zoom_start=13, )
+        # icon = folium.features.CustomIcon("video-photo/para.jpg", icon_size=(30, 30))  # Creating a custom Icon
+        # folium.Marker(location=cor, icon=icon).add_to(m)
+        m = self.add_customjs(m)
+
+        draw = Draw(
+            draw_options={
+                'polyline': {'allowIntersection': True},
+
+                'rectangle': False,
+                'polygon': False,
+                'circle': False,
+                'marker': True,
+                'circlemarker': False,
+            },
+            edit_options={'edit': False})
+        m.add_child(draw)
+
+        data = io.BytesIO()
+        m.save(data, close_file=False)
+        #self.setGeometry(100, 100, 600, 600)  # screen x,screen y ,pencere x,pencere y
+        page = WebEnginePage(self)
+        web.setPage(page)
+        web.setHtml(data.getvalue().decode())
+        self.setWindowTitle("chart")
+        layout.addWidget(web)
+
+    def add_customjs(self, map_object):
+        my_js = f"""{map_object.get_name()}.on("click",
+                    function(e){{
+                        var data = `{{"coordinates": ${{JSON.stringify(e.latlng)}}}}`;
+                        console.log(data)}});"""
+        e = Element(my_js)
+        html = map_object.get_root()
+        html.script.get_root().render()
+        # Insert new element or custom JS
+        html.script._children[e.get_name()] = e
+        return map_object
+
+    def handleConsoleMessage(self, msg):
+        data = json.loads(msg)
+        lat = data['coordinates']['lat']
+        lng = data['coordinates']['lng']
+        coords = f"latitude: {lat} longitude: {lng}"
+        # self.label.setText(coords)
+        print("copied cordinates: " + coords)  # cordinatlar oldugu gibi burda coords.
+        arr.append([coords])
+
+
+# >>>>>>>>>>>>>>>>>>>>ROTA PLANNER WINDOW CLASS<<<<<<<<<<<<<<<<<<<<#
+
+# >>>>>>>>>>>>>>>>>>>>VIDEO AND INFO THREAD<<<<<<<<<<<<<<<<<<<<#
+class IhaThread(QThread):
+    any_signal = pyqtSignal(int)
     change_pixmap_signal = pyqtSignal(np.ndarray)
 
-    def __init__(self):
-        super().__init__()
-        self._run_flag = True
+    def __init__(self, parent=None, index=0):
+        super(IhaThread, self).__init__(parent)
+        self.index = index
+        self.is_running = True
 
     def run(self):
-        cap = cv2.VideoCapture(0)
-        while self._run_flag:
-            ret, cv_img = cap.read()
-            if ret: self.change_pixmap_signal.emit(cv_img)
-        cap.release()
+        if self.index == 255:
+            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            while self.is_running:
+                ret, cv_img = cap.read()
+                if ret: self.change_pixmap_signal.emit(cv_img)
+            cap.release()
+
+        if self.index != 255:
+            cnt = 0
+            if self.index == 1:
+                while self.is_running:
+                    cnt = cnt + 1
+                    self.any_signal.emit(cnt)
+                    if cnt == 1499: cnt = 0
+                    time.sleep(0.01)
+            if self.index == 2:
+                while self.is_running:
+                    cnt = cnt + 1
+                    self.any_signal.emit(cnt)
+                    if cnt == 99: cnt = 0
+                    time.sleep(1)
+        # while self.is_running:
+        # if self.index == 1  :self.any_signal.emit(vehicle.groundspeed)
+        # if self.index == 2  :self.any_signal.emit(vehicle.airspeed)
+        # if self.index == 3 :self.any_signal.emit()
+        # if self.index == 4 :self.any_signal.emit(vehicle.velocity)
+        # if self.index == 5 :self.any_signal.emit()
+        # if self.index == 6 :self.any_signal.emit()
+        # if self.index == 7  :self.any_signal.emit(vehicle.location.global_frame.alt)
+        # if self.index == 8  :self.any_signal.emit(vehicle.heading)
+        # if self.index == 9  :self.any_signal.emit(vehicle.mode.name)
+
+        # if self.index == 10  :self.any_signal.emit(vehicle.battery.voltage)
+        ##if self.index == #  :self.any_signal.emit(vehicle.last_heartbeat)
+        ##if self.index == #  :self.any_signal.emit(vehicle.rangefinder.distance)
+        ##if self.index == #  :self.any_signal.emit(vehicle.rangefinder.voltage)
+        # time.sleep(0.5)
 
     def stop(self):
-        self._run_flag = False
-        self.wait()
+        self.is_running = False
+        if self.index == 255:
+            self.wait()
+        if self.index != 255:
+            self.terminate()
 
 
-class Window(QWidget):
+# >>>>>>>>>>>>>>>>>>>>VIDEO AND INFO THREAD<<<<<<<<<<<<<<<<<<<<#
 
+class Deneb(QMainWindow):
     def __init__(self):
         super().__init__()
-        # setting title
-        self.setStyleSheet(background)
-        self.setWindowTitle("Deneb")
-        # setting geometry
-        self.setGeometry(50, 50, window_width, window_height)
-        # calling methods
-        self.UiLivePannel()
-        self.UiControlPannel()
-        self.UiInformationPannel()
-        self.UiDisplayTime()
+        uic.loadUi("deneme.ui", self)
+        self.connection_status = 0
+        self.setWindowIcon(QtGui.QIcon('assets/iha.png'))
+        self.connect_button.clicked.connect(self.start_work)
+        self.rota_plan_planla_button.clicked.connect(self.mapdialog)
+        self.thread = {}
+        self.val = {}
+        self.temp = {}
 
-        # self.timer = QTimer(self)
-        # self.timer.setSingleShot(False)
-        # self.timer.setInterval(1000)  # in milliseconds, so 5000 = 5 seconds
-        # self.timer.timeout.connect(self.UiDisplayTime) # her saniye bitişinde gidipp çağırır
-        # self.timer.start()
-        # camerada da sürekli bir güncelleme var. bunu engelliyor olabilir
-        # başka bir yolda en alttaki ana döngüyü while içine alıp
-        # biz kapatana kadar çalışmasını sağlamak.
-        # ancak işlemciye fazla yüklenip donup kalıyor. sonrasında fazla döndürmeye çalışıp kapanıyor.
-        # çözüm olarak time.sleep(0.100) 100 ms bekleme denedim ancak bunda da kaldırmadı...
-        # şuan için iki çözüm yolu var ya telemetriden veri geldiğinde biz güncelleme yapıcağız yada
-        # asenkron bir fonksiyon ile sürekli olarak saniye başına güncellicek.
-        # eğer gelen veriye göre yaparsak kamera verilerini de etkilememiş olur sadece veri çıktılarını güncelleriz.
+    # >>>>>>>>>>>>>>>>>>>>SISTEM SAATI<<<<<<<<<<<<<<<<<<<<#
+    def UiClock(self):
+        self.screenTimer = QTimer()
+        self.screenTimer.setInterval(1000)
+        self.screenTimer.timeout.connect(self.showTime)
+        self.screenTimer.start()
 
-    # method for widgets
-    def UiDisplayTime(self):
-        # SİSTEM SAATİ GÖSTERGESİ
-        textlabel = QLabel(self)
-        time = QTime.currentTime()
-        sistem_saati = time.toString('hh:mm:ss')
-        textlabel.setText("Sistem Saati:" + sistem_saati)
-        textlabel.setStyleSheet(textcolor)
-        myFont = QtGui.QFont('Arial', 22)
-        myFont.setBold(True)
-        textlabel.setFont(myFont)
-        textlabel.setGeometry(int(window_width - 300), 10, int(window_width / 2), 35)
+    def showTime(self):
 
-    def UiInformationPannel(self):
+        current_time = QTime.currentTime()
+        time = current_time.toString('hh:mm:ss')
+        self.sistem_saati_label.setText("Sistem saati " + time)
+        self.val = SerialCom.CheckAvailableSerial()
+        if self.val != self.temp:
+            self.port_combo_box.clear()
+            for x in self.val:
+                self.temp = self.val
+                self.port_combo_box.addItem(self.val[x])
 
-        #UÇUŞ MODU GÖSTERGESİ
-        textlabel = QLabel(self)
-        ucus_modu = "STANDBY"
-        textlabel.setText("Uçuş Modu:" + str(ucus_modu))
-        textlabel.setStyleSheet(textcolor)
-        myFont = QtGui.QFont('Arial', 22)
-        myFont.setBold(True)
-        textlabel.setFont(myFont)
-        textlabel.setGeometry(14, 10, int(window_width / 2), 35)
+    # >>>>>>>>>>>>>>>>>>>>SISTEM SAATI<<<<<<<<<<<<<<<<<<<<#
 
-        list = QListWidget(self)
-        list.setGeometry(14, 50, 150, 555)
-        list.setStyleSheet("background-color:#ddd")
-        #information pannel(bilgi paneli)
-        textlabel2 = QLabel(self)
-        yer_hiz_degeri = 10
-        textlabel2.setText("Yer Hızı: "+str(yer_hiz_degeri))
-        textlabel2.setStyleSheet(textcolor)
-        myFont2 = QtGui.QFont('Arial', 11)
-        textlabel2.setFont(myFont2)
-        textlabel2.setGeometry(camera_location_x,camera_height+camera_location_y+20,250,22)
+    # >>>>>>>>>>>>>>>>>>>>ROTA PLANNER WINDOW<<<<<<<<<<<<<<<<<<<<#
+    def mapdialog(self):
+        dlg = MapCommand(self)
+        dlg.exec()
 
-        textlabel3 = QLabel(self)
-        hava_hiz_degeri = 12
-        textlabel3.setText("Hava Hızı: "+str(hava_hiz_degeri))
-        textlabel3.setStyleSheet(textcolor)
-        textlabel3.setFont(myFont2)
-        textlabel3.setGeometry(camera_location_x,camera_height+camera_location_y+45,250,22)
+    # >>>>>>>>>>>>>>>>>>>>ROTA PLANNER WINDOW<<<<<<<<<<<<<<<<<<<<#
 
-        textlabel4 = QLabel(self)
-        textlabel5 = QLabel(self)
-        textlabel4.setText("Enlem: " + str(coordinate_x))
-        textlabel4.setStyleSheet(textcolor)
-        textlabel5.setText("Boylam: " + str(coordinate_y))
-        textlabel5.setStyleSheet(textcolor)
-        textlabel4.setFont(myFont2)
-        textlabel5.setFont(myFont2)
-        textlabel4.setGeometry(camera_location_x, camera_height + camera_location_y + 70, 250, 22)
-        textlabel5.setGeometry(camera_location_x, camera_height + camera_location_y + 95, 250, 22)
+    # >>>>>>>>>>>>>>>>>>>>CONNECTION BUTTON SLOT<<<<<<<<<<<<<<<<<<<<#
+    def start_work(self):
+        if self.connection_status == 0:
+            self.connection_status = 1
+            self.connect_button.setStyleSheet(
+                "QPushButton::enabled{image : url(assets/disconnect.png)}QPushButton::pressed{image : url(assets/disconnect_press.png)}")
+            self.vehicle = self.connect_vehicle()
+            self.thread[255] = IhaThread(parent=None, index=255)
+            self.thread[255].change_pixmap_signal.connect(self.update_image)
+            self.thread[255].start()
+            self.thread[1] = IhaThread(parent=None, index=1)
+            self.thread[1].any_signal.connect(self.ground_speed)  # burada da sinyal bağlanmış
+            self.thread[1].start()
+            self.thread[2] = IhaThread(parent=None, index=2)
+            self.thread[2].any_signal.connect(self.air_speed)
+            self.thread[2].start()
+            self.thread[3] = IhaThread(parent=None, index=3)
+            self.thread[3].any_signal.connect(self.irtifa)
+            self.thread[3].start()
+            self.thread[4] = IhaThread(parent=None, index=4)
+            self.thread[4].any_signal.connect(self.surat)
+            self.thread[4].start()
+            self.thread[5] = IhaThread(parent=None, index=5)
+            self.thread[5].any_signal.connect(self.latitude)
+            self.thread[5].start()
+            self.thread[6] = IhaThread(parent=None, index=6)
+            self.thread[6].any_signal.connect(self.longitude)
+            self.thread[6].start()
+            self.thread[7] = IhaThread(parent=None, index=7)
+            self.thread[7].any_signal.connect(self.altitude)
+            self.thread[7].start()
+            self.thread[8] = IhaThread(parent=None, index=8)
+            self.thread[8].any_signal.connect(self.yaw)
+            self.thread[8].start()
+            self.thread[9] = IhaThread(parent=None, index=9)
+            self.thread[9].any_signal.connect(self.flight_mode)
+            self.thread[9].start()
+            self.thread[10] = IhaThread(parent=None, index=10)
+            self.thread[10].any_signal.connect(self.pil)
+            self.thread[10].start()
 
-        textlabel6 = QLabel(self)
-        irtifa_degeri = 100
-        textlabel6.setText("İrtifa: " + str(irtifa_degeri))
-        textlabel6.setStyleSheet(textcolor)
-        textlabel6.setFont(myFont2)
-        textlabel6.setGeometry(camera_location_x, camera_height + camera_location_y + 120, 250, 22)
+        elif self.connection_status == 1:
+            self.connection_status = 0
+            self.connect_button.setStyleSheet(
+                "QPushButton::enabled{image : url(assets/connect.png)}QPushButton::pressed{image : url(assets/connect_press.png)}")
+            self.thread[255].stop()
+            self.thread[1].stop()
+            self.thread[2].stop()
+            self.thread[3].stop()
+            self.thread[4].stop()
+            self.thread[5].stop()
+            self.thread[6].stop()
+            self.thread[7].stop()
+            self.thread[8].stop()
+            self.thread[9].stop()
+            self.thread[10].stop()
 
+    # >>>>>>>>>>>>>>>>>>>>CONNECTION BUTTON SLOT<<<<<<<<<<<<<<<<<<<<#
 
+    # >>>>>>>>>>>>>>>>>>>>THREAD UPDATE SLOT<<<<<<<<<<<<<<<<<<<<#
+    def ground_speed(self, counter):
+        self.yer_hizi_gauge.updateValue(counter)
+        self.yer_hizi_value_label.setText(str(float(counter)))
 
-        textlabel8 = QLabel(self)
-        telemetri_durumu = 1
-        textlabel8.setText("Telemetri Durumu: " + str(telemetri_durumu))
-        textlabel8.setStyleSheet(textcolor)
-        textlabel8.setFont(myFont2)
-        textlabel8.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 45, 250, 22)
+    def air_speed(self, counter):
+        self.hava_hizi_gauge.updateValue(counter)
+        self.hava_hizi_value_label.setText(str(float(counter)))
 
-        textlabel9 = QLabel(self)
-        ucus_suresi = 12
-        textlabel9.setText("Uçuş süresi: " + str(ucus_suresi))
-        textlabel9.setStyleSheet(textcolor)
-        textlabel9.setFont(myFont2)
-        textlabel9.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 70, 250, 22)
+    def irtifa(self, counter):
+        self.irtifa_gauge.updateValue(counter)
+        self.altitude_value_label.setText(str(float(counter)))
 
-        textlabel9 = QLabel(self)
-        textlabel9.setText("Bağlantı:")
-        textlabel9.setFont(myFont2)
-        textlabel9.setStyleSheet(textcolor)
-        textlabel9.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 95, 80, 22)
+    def surat(self, counter):
+        self.surat_gauge.updateValue(counter)
 
+    def latitude(self, counter):
+        self.latitude_value_label.setText(str(float(counter)))
 
+    def longitude(self, counter):
+        self.longitude_value_label.setText(str(float(counter)))
 
-    def UiControlPannel(self):
+    def altitude(self, counter):
+        self.altitude_value_label.setText(str(float(counter)))
 
+    def yaw(self, counter):
+        self.yaw_value_label.setText(str(float(counter)))
 
+    def flight_mode(self, counter):
+        self.ucus_modu_label.setText(str(float(counter)))
 
-        myFont2 = QtGui.QFont('Arial', 11)
-        control_pannel_button_x = int(window_width - 75)
-        control_pannel_textbox_x = int(window_width - 187)
-        control_pannel_text_x = int(window_width - 335)
-        # -------Control Panel Elements--------#
-        # koordinat gönder
-        label1 = QLabel(self)
-        label1.setText("Hedef gönder")
-        label1.setStyleSheet(textcolor)
-        label1.setGeometry(control_pannel_text_x, map_height + 10+ map_location_y, 100, 20)
-        textbox1 = QLineEdit(self)
-        textbox1.setStyleSheet(textcolor)
-        textbox1.setGeometry(control_pannel_textbox_x, map_height + 10+ map_location_y, 100, 20)
-        coordinate_button = QPushButton("Gönder", self)
-        coordinate_button.setStyleSheet(textcolor)
-        coordinate_button.setGeometry(control_pannel_button_x, map_height + 10+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
-        # araç hızını değiştir
-        label2 = QLabel(self)
-        label2.setText("Hızı değiştir")
-        label2.setStyleSheet(textcolor)
-        label2.setGeometry(control_pannel_text_x, map_height + 35+ map_location_y, 100, 20)
-        textbox2 = QLineEdit(self)
-        textbox2.setStyleSheet(textcolor)
-        textbox2.setGeometry(control_pannel_textbox_x, map_height + 35+ map_location_y, 100, 20)
-        hiz_button = QPushButton("Gönder", self)
-        hiz_button.setStyleSheet(textcolor)
-        hiz_button.setGeometry(control_pannel_button_x, map_height + 35+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
-        # araç irtifasını değiştir
-        label3 = QLabel(self)
-        label3.setText("İrtifa değiştir")
-        label3.setStyleSheet(textcolor)
-        label3.setGeometry(control_pannel_text_x, map_height + 60+ map_location_y, 100, 20)
-        textbox3 = QLineEdit(self)
-        textbox3.setStyleSheet(textcolor)
-        textbox3.setGeometry(control_pannel_textbox_x, map_height + 60+ map_location_y, 100, 20)
-        irtifa_button = QPushButton("Gönder", self)
-        irtifa_button.setStyleSheet(textcolor)
-        irtifa_button.setGeometry(control_pannel_button_x, map_height + 60+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
-        # uçuş modu seçimi
-        label3 = QLabel(self)
-        label3.setText("Uçuş modu:")
-        label3.setStyleSheet(textcolor)
-        label3.setGeometry(control_pannel_text_x, map_height + 85+ map_location_y, 200, 20)
-        onayla_button = QPushButton("Onayla", self)
-        onayla_button.setStyleSheet(textcolor)
-        onayla_button.setGeometry(control_pannel_button_x, map_height + 85+ map_location_y, 65, 20)  # butonlar arası 5px boşluk
-        # uçuş modları
-        radio1 = QRadioButton("Otonom Kalkış", self)
-        radio1.setStyleSheet(textcolor)
-        radio1.setGeometry(control_pannel_text_x+50, map_height + 110+ map_location_y, 150, 20)
+    def pil(self, counter):
+        self.pil_voltaji_label.setText(str(float(counter)))
 
-        radio2 = QRadioButton("Otonom İniş", self)
-        radio2.setStyleSheet(textcolor)
-        radio2.setGeometry(control_pannel_text_x+50, map_height + 135+ map_location_y, 150, 20)
+    # >>>>>>>>>>>>>>>>>>>>THREAD UPDATE SLOT<<<<<<<<<<<<<<<<<<<<#
 
-        radio4 = QRadioButton("Bul ve Takip Et", self)
-        radio4.setStyleSheet(textcolor)
-        radio4.setGeometry(control_pannel_text_x+50, map_height + 160+ map_location_y, 150, 20)
+    # >>>>>>>>>>>>>>>>>>>>VEHICLE CONNECTION<<<<<<<<<<<<<<<<<<<<#
+    def connect_vehicle(self):
+        # return SerialCom.connectSerialDevice(COM14,115200)
+        pass
 
-        radio5 = QRadioButton("Kamikaze", self)
-        radio5.setStyleSheet(textcolor)
-        radio5.setGeometry(control_pannel_text_x+50, map_height + 185+ map_location_y, 150, 20)
+    # >>>>>>>>>>>>>>>>>>>>VEHICLE CONNECTION<<<<<<<<<<<<<<<<<<<<#
 
-        textbox4 = QLineEdit(self)
-        textbox4.setStyleSheet(textcolor)
-        textbox4.setGeometry(control_pannel_text_x+50, map_height + 210+ map_location_y, 100, 20)
-        textbox4 = QLineEdit(self)
-        textbox4.setGeometry(control_pannel_text_x+155, map_height + 210+ map_location_y, 100, 20)
-        # -------Control Panel Elements--------#
-
-        textlabel10 = QLabel(self)
-        ucus_suresi = 12
-        textlabel10.setText("Bit Hızı:")
-        textlabel10.setStyleSheet(textcolor)
-        textlabel10.setFont(myFont2)
-        textlabel10.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 120, 80, 22)
-
-        textbox5 = QLineEdit(self)
-        textbox5.setText(location)
-        textbox5.setStyleSheet(textcolor)
-        textbox5.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 95, 95, 20)
-        baglan_button = QPushButton("BAĞLAN", self)
-        baglan_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 95, 65,20)  # butonlar arası 5px boşluk
-        baglan_button.setStyleSheet(textcolor)
-
-        textbox6 = QLineEdit(self)
-        textbox6.setText(str(bitrate))
-        textbox6.setStyleSheet(textcolor)
-        textbox6.setGeometry(camera_location_x + 330, camera_height + camera_location_y + 120, 95, 20)
-        baglan2_button = QPushButton("KES", self)
-        baglan2_button.setGeometry(camera_location_x + 440, camera_height + camera_location_y + 120, 65,20)  # butonlar arası 5px boşluk
-        baglan2_button.setStyleSheet(textcolor)
-
-        textlabel7 = QLabel(self)
-        textlabel7.setText("Araç pil durumu: ")
-        textlabel7.setFont(myFont2)
-        textlabel7.setStyleSheet(textcolor)
-        textlabel7.setGeometry(camera_location_x + 250, camera_height + camera_location_y + 20, 120, 22)
-
-        pbar = QProgressBar(self)
-        pbar.setGeometry(camera_location_x + 370, camera_height + camera_location_y + 20, 165, 19)
-        pbar.setValue(pil_seviyesi)
-
-
-        def baglan():
-            location = textbox5.text()
-            print("location: " + location)
-            bitrate = textbox6.text() * 1
-            print("bitrate: " + bitrate)
-            vehicle = connect(location, wait_ready=False, baud=bitrate)
-            print("Mode: %s" % vehicle.mode.name)
-            print("Groundspeed: %s" % vehicle.groundspeed)
-            print("Battery: %s" % vehicle.battery.level)
-
-            self.pil_seviyesi = vehicle.battery.level
-            timer = QTimer(self)
-            timer.timeout.connect(goster)
-            timer.start(1000)
-
-
-        def baglan2():
-            print("hi")
-
-        def goster():
-            print(self.pil_seviyesi)
-            pbar.setValue(self.pil_seviyesi)
-
-
-        # adding action to a button
-        coordinate_button.clicked.connect(self.koordinat_gonder)
-        hiz_button.clicked.connect(self.hiz_gonder)
-        irtifa_button.clicked.connect(self.irtifa_gonder)
-        onayla_button.clicked.connect(self.ucus_modunu_gonder)
-        baglan_button.clicked.connect(baglan)
-        baglan2_button.clicked.connect(baglan2)
-
-    def UiLivePannel(self):
-        # -------Map Elements--------#
-        webView = QWebEngineView(self)
-        webView.setGeometry(map_location_x, map_location_y, map_width, map_height)
-        webView.setContentsMargins(10,10,10,10)
+    # >>>>>>>>>>>>>>>>>>>>MAP<<<<<<<<<<<<<<<<<<<<#
+    def UiMap(self):
+        self.webView = QWebEngineView()
+        self.setLayout(self.layout_map)
+        self.layout_map.addWidget(self.webView)
         # coordinate = (37.8199286, -122.4782551) # usa da bir yer
-        coordinate = (coordinate_x, coordinate_y)
+        coordinate = (coordinate_lat, coordinate_lon)
         m = folium.Map(
             tiles='Stamen Terrain', zoom_start=10, location=coordinate
         )
-        # save map
         data = io.BytesIO()
         m.save(data, close_file=False)
-        webView.setHtml(data.getvalue().decode())
-        # -------Map Elements--------#
+        self.webView.setHtml(data.getvalue().decode())
 
-        #-------Video Elements--------#
-        self.image_label = QLabel(self)
-        self.image_label.setGeometry(camera_location_x,camera_location_y,camera_width, camera_height)
-        #gui üzerindeki boyut ve konum belirler
-        vbox = QVBoxLayout()
-        self.setLayout(vbox)
-        self.thread = VideoThread()
-        #self.thread2 = InfoThread()
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        self.thread.start()
-        #self.thread2.start()
-        # -------Video Elements--------#
+    # >>>>>>>>>>>>>>>>>>>>MAP<<<<<<<<<<<<<<<<<<<<#
 
+    # >>>>>>>>>>>>>>>>>>>>VIDEO CAPTURE<<<<<<<<<<<<<<<<<<<<#
     def closeEvent(self, event):
-        self.thread.stop()
-        #self.thread2.stop()
+        self.thread[255].stop()
         event.accept()
 
     @pyqtSlot(np.ndarray)
@@ -362,54 +341,118 @@ class Window(QWidget):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        #burdaki değişkenler videonun çözünürlüğünü belirler
-        #video elementin içindekiler ise videnun ne kadarının
-        #gösterileceğini söyler(guide kapladığı yer)
-        p = convert_to_Qt_format.scaled(camera_width_resolution,camera_height_resolution, Qt.KeepAspectRatio)
+        p = convert_to_Qt_format.scaled(700, 800, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
-    #Button events ...
-    def koordinat_gonder(self):
-        BR = QMessageBox.question(self, 'Mission Planner Message',"koordinati değiştir ?",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if BR == QMessageBox.Yes:
-            print('Yes clicked.')
-        else:
-            print('No clicked.')
+    # >>>>>>>>>>>>>>>>>>>>VIDEO CAPTURE<<<<<<<<<<<<<<<<<<<<#
+
+    # >>>>>>>>>>>>>>>>>>>>UI WIDGET SET<<<<<<<<<<<<<<<<<<<<#
+    def ui_widget_set(self):
+
+        background_color = "background-color:#0F0E0E"
+        button_background_color = "background-color:#541212"
+        text_color = "color:#8B9A46"
+        border_color = "#EEEEEE"
+
+        self.yer_hizi_gauge.setGaugeTheme(0)
+        self.yer_hizi_gauge.units = "m/s"
+        self.yer_hizi_gauge.maxValue = 1500
+        self.yer_hizi_gauge.scalaCount = 5
+        self.yer_hizi_gauge.setEnableBarGraph(False)
+        self.yer_hizi_gauge.setNeedleColor(R=255, G=0, B=0)
+        self.yer_hizi_gauge.setMouseTracking(False)
+        self.hava_hizi_gauge.setGaugeTheme(0)
+        self.hava_hizi_gauge.units = "m/s"
+        self.hava_hizi_gauge.maxValue = 100
+        self.hava_hizi_gauge.scalaCount = 5
+        self.hava_hizi_gauge.setEnableBarGraph(False)
+        self.hava_hizi_gauge.setNeedleColor(R=255, G=0, B=0)
+        self.hava_hizi_gauge.setMouseTracking(False)
+        self.irtifa_gauge.setGaugeTheme(0)
+        self.irtifa_gauge.units = "m"
+        self.irtifa_gauge.maxValue = 1000
+        self.irtifa_gauge.scalaCount = 5
+        self.irtifa_gauge.setNeedleColor(R=255, G=0, B=0)
+        self.irtifa_gauge.setMouseTracking(False)
+        self.surat_gauge.setGaugeTheme(0)
+        self.surat_gauge.units = "m/s"
+        self.surat_gauge.maxValue = 1000
+        self.surat_gauge.scalaCount = 5
+        self.surat_gauge.setEnableBarGraph(False)
+        self.surat_gauge.setNeedleColor(R=255, G=0, B=0)
+        self.surat_gauge.setMouseTracking(False)
+        self.setWindowTitle("IHA MARMARA-ORION")
+        self.main_widget.setStyleSheet(background_color)
+        self.ucus_modu_label.setStyleSheet(text_color)
+        self.flight_time_label.setStyleSheet(text_color)
+        self.pil_text_label.setStyleSheet(text_color)
+        self.pil_voltaji_label.setStyleSheet(text_color)
+        self.yer_hizi_label.setStyleSheet(text_color)
+        self.hava_hizi_label.setStyleSheet(text_color)
+        self.irtifa_label.setStyleSheet(text_color)
+        self.surat_label.setStyleSheet(text_color)
+        self.send_coor_text_label.setStyleSheet(text_color)
+        self.send_speed_text_label.setStyleSheet(text_color)
+        self.send_alt_text_label.setStyleSheet(text_color)
+        self.rota_plan_text_label.setStyleSheet(text_color)
+        self.yer_hizi_text_label.setStyleSheet(text_color)
+        self.yer_hizi_value_label.setStyleSheet(text_color)
+        self.hava_hizi_value_label.setStyleSheet(text_color)
+        self.hava_hizi_text_label.setStyleSheet(text_color)
+        self.latitude_value_label.setStyleSheet(text_color)
+        self.latitude_text_label.setStyleSheet(text_color)
+        self.longitude_value_label.setStyleSheet(text_color)
+        self.longitude_text_label.setStyleSheet(text_color)
+        self.altitude_value_label.setStyleSheet(text_color)
+        self.altitude_text_label.setStyleSheet(text_color)
+        self.yaw_value_label.setStyleSheet(text_color)
+        self.yaw_text_label.setStyleSheet(text_color)
+        self.inis_radio.setStyleSheet(text_color)
+        self.kalkis_radio.setStyleSheet(text_color)
+        self.bul_radio.setStyleSheet(text_color)
+        self.other_radio.setStyleSheet(text_color)
+        self.ucus_modu_text_label.setStyleSheet(text_color)
+        self.print_list.setStyleSheet(text_color)
+        self.send_coor_lat_edit.setStyleSheet(text_color)
+        self.send_coor_lon_edit.setStyleSheet(text_color)
+        self.send_speed_edit.setStyleSheet(text_color)
+        self.send_alt_edit.setStyleSheet(text_color)
+        self.baud_text_label.setStyleSheet(text_color)
+        self.port_text_label.setStyleSheet(text_color)
+        self.sistem_saati_label.setStyleSheet(text_color)
+        self.tabWidget.setStyleSheet(text_color)
+        self.send_coor_lat_edit.setStyleSheet("border: 1px solid " + border_color + ";" + text_color + ";")
+        self.send_coor_lon_edit.setStyleSheet("border: 1px solid " + border_color + ";" + text_color + ";")
+        self.send_speed_edit.setStyleSheet("border: 1px solid " + border_color + ";" + text_color + ";")
+        self.send_alt_edit.setStyleSheet("border: 1px solid " + border_color + ";" + text_color + ";")
+        self.print_list.setStyleSheet("border: 1px solid " + border_color + ";" + text_color + ";")
+        self.port_combo_box.setStyleSheet("QComboBox {" + button_background_color + ";" + text_color + ";}")
+        self.baud_combo_box.setStyleSheet("QComboBox {" + button_background_color + ";" + text_color + ";}")
+        self.flight_mode_combo_box.setStyleSheet("QComboBox {" + button_background_color + ";" + text_color + ";}")
+        self.send_alt_button.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.send_speed_button.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.send_coor_button.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.pushButton_4.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.rota_plan_planla_button.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.rota_plan_onayla_button.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.rota_plan_temizle_button.setStyleSheet("QPushButton {" + button_background_color + ";" + text_color + ";}")
+        self.rota_table.setStyleSheet(
+            "QTableWidget::foreground {" + text_color + ";}QTableWidget::background {" + button_background_color + ";}")
+        self.rota_table.setStyleSheet("QTableWidget {" + button_background_color + ";}")
+        self.connect_button.setStyleSheet(
+            "QPushButton::enabled{image : url(assets/connect.png)}QPushButton::pressed{image : url(assets/connect_press.png)}")
+        self.widget_2.setStyleSheet("QWidget{border-image:url(assets/orion.png)}")
+        self.widget_3.setStyleSheet("QWidget{border-image:url(assets/iha.png)}")
 
 
-    def hiz_gonder(self):
-        BR = QMessageBox.question(self, 'Mission Planner Message', "hızı değiştir ?",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if BR == QMessageBox.Yes:
-            print('Yes clicked.')
-        else:
-            print('No clicked.')
+# >>>>>>>>>>>>>>>>>>>>UI WIDGET SET<<<<<<<<<<<<<<<<<<<<#
 
-    def irtifa_gonder(self):
-        BR = QMessageBox.question(self, 'Mission Planner Message', "irtifayı değiştir ?",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if BR == QMessageBox.Yes:
-            print('Yes clicked.')
-        else:
-            print('No clicked.')
-
-    def ucus_modunu_gonder(self):
-        BR = QMessageBox.question(self, 'Mission Planner Message', "Uçuş modunu değiştir ?",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if BR == QMessageBox.Yes:
-            print('Yes clicked.')
-        else:
-            print('No clicked.')
-
-
-
-if __name__=="__main__":
-    # create pyqt5 app
-    App = QApplication(sys.argv)
-    # create the instance of our Window
-    window = Window()
+if __name__ == "__main__":
+    app = QApplication([])
+    app.setStyle("Fusion")
+    window = Deneb()
+    window.ui_widget_set()
+    window.UiMap()
+    window.UiClock()
     window.show()
-    App.setWindowIcon(QtGui.QIcon("iha.png"))
-    # start the app
-    sys.exit(App.exec())
+    app.exec()
